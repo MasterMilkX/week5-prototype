@@ -2,17 +2,107 @@
 var canvas = document.createElement("canvas");
 canvas.id = "game";
 var ctx = canvas.getContext("2d");
-canvas.width = 320;
-canvas.height = 320;
+canvas.width = 480;
+canvas.height = 384;
 document.body.appendChild(canvas);
 
-var size = 16;
 
-//camera
+////// SPRITES  ////
+var spr_size = 32;
+var size = 32;
+
+
+//tileset
+var collideTiles = [1];			//collidable tiles
+
+var tiles = new Image();
+tiles.src = "img/tileset_demo.png";
+var tilesReady = false;
+tiles.onload = function(){
+	tilesReady = true;
+};
+var tpr = 2; //tiles per row
+
+
+//characters
+var bomberIMG = new Image();
+bomberIMG.src = "img/bomber.png";
+var bomberReady = false;
+bomberIMG.onload = function(){bomberReady = true;};
+
+var princessIMG = new Image();
+princessIMG.src = "img/princess.png";
+var princessReady = false;
+princessIMG.onload = function(){princessReady = true;};
+
+var ogreIMG = new Image();
+ogreIMG.src = "img/ogre.png";
+var ogreReady = false;
+ogreIMG.onload = function(){ogreReady = true;};
+
+var bossKingIMG = new Image();
+bossKingIMG.src = "img/evil_king.png";
+var bossKingReady = false;
+bossKingIMG.onload = function(){bossKingReady = true;};
+
+//items
+var bombIMG = new Image();
+bombIMG.src = "img/bomb.png";
+var bombReady = false;
+bombIMG.onload = function(){bombReady = true;};
+
+var doorIMG = new Image();
+doorIMG.src = 'img/door.png';
+var doorReady = false;
+doorIMG.onload = function(){doorReady = true;};
+
+
+/////  AI AND PLAYER  //////
+
+var bomber = {
+	//position
+	x : 0,
+	y : 0,
+
+	//animations
+	img : bomberIMG,
+	ready : bomberReady,
+	anim : 0,
+	bt : 0,
+
+	hasPrincess : false
+}
+
+var princess = {
+	//position
+	x : 0,
+	y : 0,
+
+	//animations
+	img : princessIMG,
+	ready : princessReady
+}
+
+//bombs placed on maps
+function bomb(x,y){
+	this.x = x;
+	this.y = y;
+	this.fuse = 2;
+}
+
+
+///// CAMERA AND MAP  //////
 var camera = {
 	x : 0,
 	y : 0
 };
+
+
+var castle = {}			//4x4 array of different room types labeled by number with key character locations
+var gameMap = []		//full tiled map
+var visitedRooms = []	//list of rooms the player has visited already (to show on the map)
+var curRoom = [];		//current room map layout 
+
 
 //KEYS
 
@@ -29,6 +119,8 @@ var b_key = 88;   //[X]
 var actionKeySet = [a_key, b_key];
 
 var keys = [];
+
+var stepped = false;	//move once
 
 
 
@@ -61,6 +153,37 @@ function anyMoveKey(){
 
 function anyActionKey(){
 	return (keys[a_key] || keys[b_key]);
+}
+
+//makes a step for the game to go (characters and players move)
+function step(){
+	let oldPos = [bomber.x,bomber.y];
+
+	//move bomber
+	if(keys[upKey] && !collidable(bomber.x,bomber.y-1))
+		bomber.y--;
+	else if(keys[downKey] && !collidable(bomber.x,bomber.y+1))
+		bomber.y++;
+	else if(keys[leftKey] && !collidable(bomber.x-1,bomber.y))
+		bomber.x--;
+	else if(keys[rightKey] && !collidable(bomber.x+1,bomber.y))
+		bomber.x++;
+
+	//make princess follow bomber
+	if(bomber.hasPrincess){
+		princess.x = oldPos[0];
+		princess.y = oldPos[1];
+	}
+	
+
+	stepped = true;
+
+}
+
+//check if a specific tile is collidable
+function collidable(x,y){
+	//return false;
+	return x < 0 || x > (gameMap[0].length-1) || y < 0 || y > (gameMap.length-1) || inArr(collideTiles,gameMap[y][x]);
 }
 
 
@@ -100,6 +223,54 @@ function panCamera(){
 
 //////////////////  RENDER FUNCTIONS  ////////////////////
 
+//check that all images are loaded into the game
+function checkRender(){
+	//tiles
+	if(!tilesReady){
+		tiles.onload = function(){
+			tilesReady = true;
+		};
+	}
+
+
+	//player
+	if(!bomber.ready){
+		bomber.img.onload = function(){bomber.ready = true;}
+		if(bomber.img.width !== 0){
+			bomber.ready = true;
+		}
+	}
+	//princess
+	if(!princess.ready){
+		princess.img.onload = function(){princess.ready = true;}
+		if(princess.img.width !== 0){
+			princess.ready = true;
+		}
+	}
+}
+
+//draws the castle
+function drawCastle(){
+	//don't draw if tiles not ready yet
+	if(!tilesReady){
+		checkRender();
+		return;
+	}
+
+	//test map generation
+	for(let y=0;y<canvas.height/size;y++){
+		for(let x=0;x<canvas.width/size;x++){
+			ctx.drawImage(tiles, 
+					spr_size * Math.floor(gameMap[y][x] % tpr), spr_size * Math.floor(gameMap[y][x] / tpr), 
+					spr_size, spr_size, 
+					(x * size), (y * size), 
+					size, size);
+		}
+	}
+}
+
+
+//draw images onto the canvas
 function render(){
 	ctx.save();
 	//ctx.translate(-camera.x, -camera.y);		//camera
@@ -110,6 +281,20 @@ function render(){
 	ctx.fillRect(0,0,canvas.width, canvas.height);
 	
 	/*   add draw functions here  */
+	//draw tiles from tileset
+	drawCastle();
+
+
+	//draw characters
+
+
+	if(bomber.ready)
+		ctx.drawImage(bomber.img, bomber.anim*spr_size,0,spr_size,spr_size,bomber.x*size,bomber.y*size,size,size);
+
+	if(princess.ready && princess.show)
+		ctx.drawImage(princess.img, ((bomber.anim+1)%2)*spr_size,0,spr_size,spr_size,princess.x*size,princess.y*size,size,size);
+
+
 	
 	ctx.restore();
 }
@@ -120,7 +305,20 @@ function render(){
 
 //game initialization function
 function init(){
+	newCastle();
 
+	//start animations for all characters
+	bomber.bt = setInterval(function(){bomber.anim = (bomber.anim == 1 ? 0 : 1);},400);
+}
+
+function newCastle(){
+	castle = genNewCastle();
+	gameMap = makeFullCastleMap(castle);
+
+	//TEMPORARY
+	bomber.y = randInd(11,1);
+	bomber.x = randInd(9,1);
+	curRoom = 0;
 }
 
 //main game loop
@@ -140,6 +338,13 @@ function main(){
 		clearInterval(kt);
 		kt = 0;
 		keyTick=0;
+	}
+
+	if(anyMoveKey() && (keyTick % 4 == 0)){
+		if(!stepped)
+			step();
+	}else{
+		stepped = false;
 	}
 
 	//debug
