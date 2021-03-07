@@ -2,8 +2,8 @@
 var canvas = document.createElement("canvas");
 canvas.id = "game";
 var ctx = canvas.getContext("2d");
-canvas.width = 480;
-canvas.height = 384;
+canvas.width = 512;
+canvas.height = 448;
 document.body.appendChild(canvas);
 
 
@@ -92,16 +92,21 @@ function bomb(x,y){
 
 
 ///// CAMERA AND MAP  //////
+/*
 var camera = {
 	x : 0,
 	y : 0
 };
+*/
+let camOffX = 0;
+let camOffY = 0;
 
 
 var castle = {}			//4x4 array of different room types labeled by number with key character locations
 var gameMap = []		//full tiled map
 var visitedRooms = []	//list of rooms the player has visited already (to show on the map)
 var curRoom = [];		//current room map layout 
+var curMap = [];
 
 
 //KEYS
@@ -176,14 +181,17 @@ function step(){
 	}
 	
 
+
 	stepped = true;
 
 }
 
 //check if a specific tile is collidable
 function collidable(x,y){
+	x = x-1;
+	y = y-1;
 	//return false;
-	return x < 0 || x > (gameMap[0].length-1) || y < 0 || y > (gameMap.length-1) || inArr(collideTiles,gameMap[y][x]);
+	return x < 0 || x > curMap[0].length || y < 0 || y > curMap.length || inArr(collideTiles,curMap[y][x]);
 }
 
 
@@ -249,6 +257,14 @@ function checkRender(){
 	}
 }
 
+function calcCamOffset(){
+	let xo = [-2,9,20,31];
+	let yo = [-2,7,16,25];
+
+	camOffX = xo[curRoom%4];
+	camOffY = yo[Math.floor(curRoom/4)];
+}
+
 //draws the castle
 function drawCastle(){
 	//don't draw if tiles not ready yet
@@ -257,6 +273,9 @@ function drawCastle(){
 		return;
 	}
 
+	if(gameMap.length == 0){return;}
+
+	/*
 	//test map generation
 	for(let y=0;y<canvas.height/size;y++){
 		for(let x=0;x<canvas.width/size;x++){
@@ -266,6 +285,36 @@ function drawCastle(){
 					(x * size), (y * size), 
 					size, size);
 		}
+	}
+	*/
+	//draw only the area around the current map
+	//camOffY = (12*Math.floor(curRoom/4))-2;
+	//camOffX = (16*(curRoom%4))-2;
+	calcCamOffset();
+
+	//draw map of current room and then some
+	let mx = 0;
+	let my = 0;
+	for(let y=camOffY;y<camOffY+14;y++){
+		mx = 0;
+		for(let x=camOffX;x<camOffX+16;x++){
+			//out of bounds (draw a black square)
+			if(y < 0 || y >= gameMap.length || x < 0 || x > gameMap[0].length){
+				ctx.fillStyle = "#000";
+				ctx.fillRect(mx*size,my*size,size,size);
+			}	
+			else{
+				//otherwise draw the tile
+				ctx.drawImage(tiles, 
+					spr_size * Math.floor(gameMap[y][x] % tpr), spr_size * Math.floor(gameMap[y][x] / tpr), 
+					spr_size, spr_size, 
+					(mx * size), (my * size), 
+					size, size);
+			}
+			
+			mx++;
+		}
+		my++;
 	}
 }
 
@@ -289,10 +338,12 @@ function render(){
 
 
 	if(bomber.ready)
-		ctx.drawImage(bomber.img, bomber.anim*spr_size,0,spr_size,spr_size,bomber.x*size,bomber.y*size,size,size);
+		ctx.drawImage(bomber.img, bomber.anim*spr_size,0,spr_size,spr_size,
+			(2*size)+bomber.x*size,(2*size)+bomber.y*size,size,size);
 
 	if(princess.ready && princess.show)
-		ctx.drawImage(princess.img, ((bomber.anim+1)%2)*spr_size,0,spr_size,spr_size,princess.x*size,princess.y*size,size,size);
+		ctx.drawImage(princess.img, ((bomber.anim+1)%2)*spr_size,0,spr_size,spr_size,
+			(2*size)+princess.x*size,(2*size)+princess.y*size,size,size);
 
 
 	
@@ -316,9 +367,17 @@ function newCastle(){
 	gameMap = makeFullCastleMap(castle);
 
 	//TEMPORARY
-	bomber.y = randInd(11,1);
-	bomber.x = randInd(9,1);
-	curRoom = 0;
+	curRoom = castle['startRoom'];
+	curMap = castle['layout'][curRoom]['map'];
+	let rp = randPos(curMap);
+	bomber.x = rp[0]+1;
+	bomber.y = rp[1]+1;
+
+}
+
+function nextRoom(r){
+	curRoom = r;
+	curMap = castle['layout'][curRoom]['map'];
 }
 
 //main game loop
