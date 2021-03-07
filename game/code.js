@@ -290,30 +290,34 @@ function step(){
 	let ogres = castle['layout'][curRoom]['ogres'];
 	for(let o=0;o<ogres.length;o++){
 		let ogre = ogres[o];
-		if(touching(bomber,ogre)){
-			bomber.hp--;
-		}
-		else{
+		let r = Math.random();
+
+		if(r < 0.6){
 			let np = drunkardsWalk(ogre,curMap);
 			ogre.x = np[0];
 			ogre.y = np[1];
+		}
+		
+		if(touching(bomber,ogre)){
+			bomber.hp--;
 		}
 	}
 
 	//king damage player and place bombs
 	if(castle['king'] == curRoom && !bomber.defeatKing){
+		
+		let np = drunkardsWalk(king,curMap);
+		king.x = np[0];
+		king.y = np[1];
+
+		//place bomb randomly
+		let r = Math.random();
+		if(r < 0.33){
+			//place red bomb
+		}
+		
 		if(touching(bomber,king)){
 			bomber.hp--;
-		}else{
-			let np = drunkardsWalk(king,curMap);
-			king.x = np[0];
-			king.y = np[1];
-
-			//place bomb randomly
-			let r = Math.random();
-			if(r < 0.33){
-				//place red bomb
-			}
 		}
 	}
 
@@ -540,12 +544,14 @@ function renderGame(){
 		ctx.textAlign = "left";
 		ctx.font = "18px monospace";
 
-		//ogres
+		//diamonds
+		ctx.fillStyle = "#00FCFC"
 		ctx.drawImage(diamondIMG, bomber.anim*36,0,36,36,
 			120, 105, 45, 45);
 		ctx.fillText(bomber.money + " x Treasure Found", 180, 130);
 
 		//ogres
+		ctx.fillStyle = "#017900";
 		ctx.drawImage(ogreIMG, bomber.anim*spr_size,0,spr_size,spr_size,
 			120, 165, 48, 48);
 		ctx.fillText(bomber.ogres + " x Ogres defeated", 180, 200);
@@ -568,6 +574,56 @@ function renderGame(){
 		ctx.fillStyle = "#F3C714";
 		ctx.font = "24px monospace";
 		ctx.fillText("Press Z to go to the next castle", canvas.width/2, 400);
+		
+	}
+	else if(gamemode == "game_over"){
+		ctx.save();
+		//ctx.translate(-camera.x, -camera.y);		//camera
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		
+		//background
+		ctx.fillStyle = "#232323";
+		ctx.fillRect(0,0,canvas.width, canvas.height);
+
+		//title
+		ctx.fillStyle = "#ff0000";
+		ctx.textAlign = "center";
+		ctx.font = "36px monospace";
+		ctx.fillText("GAME OVER!", canvas.width/2, 70);
+
+		ctx.fillStyle = "#fff";
+		ctx.textAlign = "left";
+		ctx.font = "18px monospace";
+
+		//diamonds
+		ctx.fillStyle = "#00FCFC";
+		ctx.drawImage(diamondIMG, bomber.anim*36,0,36,36,
+			120, 105, 45, 45);
+		ctx.fillText(bomber.totalMoney + " x Treasure Found", 180, 130);
+
+		//ogres
+		ctx.fillStyle = "#017900";
+		ctx.drawImage(ogreIMG, bomber.anim*spr_size,0,spr_size,spr_size,
+			120, 165, 48, 48);
+		ctx.fillText(bomber.totalOgres + " x Ogres defeated", 180, 200);
+		
+		//princess and king
+		ctx.fillStyle = "#D56AD4";
+		ctx.drawImage(princess.img, bomber.anim*spr_size,0,spr_size,spr_size,
+			120, 235, 48, 48);
+		ctx.fillText(bomber.totalPrincesses + " x Princesses Saved", 180, 270);
+		
+		
+		ctx.fillStyle = "#ff0000";
+		ctx.drawImage(king.img, bomber.anim*spr_size,0,spr_size,spr_size,
+			120, 305, 48, 48);
+		ctx.fillText(bomber.totalKings + " x Kings Defeated!", 180, 340);
+		
+
+		ctx.textAlign = "center";
+		ctx.fillStyle = "#F3C714";
+		ctx.font = "24px monospace";
+		ctx.fillText("Press Z to restart", canvas.width/2, 400);
 		
 	}
 	
@@ -743,6 +799,17 @@ function finishCastle(){
 
 }
 
+function resetGame(){
+	bomber.totalMoney = 0;
+	bomber.totalKings = 0;
+	bomber.totalOgres = 0;
+	bomber.totalPrincesses = 0;
+
+	bomber.hp = 3;
+
+	newCastle();
+}
+
 //main game loop
 let canGotoNext = true;
 function main(){
@@ -757,7 +824,7 @@ function main(){
 	//keyboard ticks
 	var akey = anyKey();
 	if(akey && kt == 0){
-		kt = setInterval(function(){keyTick+=1}, 75);
+		kt = setInterval(function(){keyTick+=1}, 50);
 	}else if(!akey){
 		clearInterval(kt);
 		kt = 0;
@@ -765,7 +832,7 @@ function main(){
 	}
 
 	//step action
-	if(anyMoveKey() && (keyTick % 4 == 0)){
+	if(anyMoveKey() && (keyTick % 5 == 0)){
 		if(!stepped)
 			step();
 	}else{
@@ -800,9 +867,17 @@ function main(){
 		}else if(gamemode == "clear_screen" && canGotoNext){
 			canGotoNext = false;
 			newCastle();
+		}else if(gamemode == "game_over" && canGotoNext){
+			canGotoNext = false;
+			resetGame();
 		}
 	}else{
 		canGotoNext = true;
+	}
+
+	//game over
+	if(bomber.hp == 0){
+		gamemode = "game_over";
 	}
 
 	//debug
