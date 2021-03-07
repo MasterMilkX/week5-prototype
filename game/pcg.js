@@ -1,3 +1,26 @@
+
+/// GENERIC FUNCTIONS //
+
+//checks if an element is in an array
+function inArr(arr, e){
+	if(arr.length == 0)
+		return false;
+	return arr.indexOf(e) !== -1
+}
+
+//
+function inArr2D(arr2,e2){
+	if(arr2.length == 0)
+		return false;
+
+	let str_e = e2.join();
+	for(let a=0;a<arr2.length;a++){
+		if(arr2[a].join() == str_e)
+			return true;
+	}
+	return false;
+}
+
 //the different kinds of rooms to generate in the castle
 //each room is 10x8 with borders separating the rooms
 var roomLayouts = {
@@ -61,18 +84,6 @@ var roomLayouts = {
 				[0,0,0,1,0,0,1,0,0,0],
 				[0,0,0,0,0,0,0,0,0,0]
 	],
-	/*
-	5 : [			//loss
-				[0,0,0,0,0,0,0,0,0,0],
-				[0,1,0,0,0,1,0,0,0,0],
-				[0,1,0,0,0,1,0,0,1,0],
-				[0,1,0,0,0,1,0,0,1,0],
-				[0,0,0,0,0,0,0,0,0,0],
-				[0,1,0,1,0,1,0,0,0,0],
-				[0,1,0,1,0,1,0,1,1,1],
-				[0,1,0,1,0,1,0,0,0,0]
-	],
-	*/
 	6 : [			//checkerboard
 				[0,0,0,0,0,0,0,0,0,0],
 				[0,1,0,1,0,0,1,0,1,0],
@@ -81,6 +92,16 @@ var roomLayouts = {
 				[0,0,0,0,0,0,0,0,0,0],
 				[0,0,1,0,0,0,0,1,0,0],
 				[0,1,0,1,0,0,1,0,1,0],
+				[0,0,0,0,0,0,0,0,0,0]
+	],
+	7 : [			//dna
+				[0,0,0,0,0,0,0,0,0,0],
+				[0,1,1,1,0,0,1,1,1,0],
+				[0,0,1,0,0,0,0,1,0,0],
+				[0,1,0,1,0,0,1,0,1,0],
+				[0,1,0,0,0,0,0,0,1,0],
+				[0,0,1,0,0,0,0,1,0,0],
+				[0,1,1,1,0,0,1,1,1,0],
 				[0,0,0,0,0,0,0,0,0,0]
 	]
 }
@@ -92,9 +113,6 @@ function door(x,y,goto,isExit=false){
 	this.goto = goto;
 	this.isExit = isExit;
 }
-
-
-
 
 //returns a random number from i to n-1
 function randInd(n,i=0){
@@ -114,17 +132,6 @@ function randPos(map){
 	}
 
 	return [x,y];
-}
-
-//get closest open position to a point
-function nextPos(m,p){
-	let dirpos = [[p.x+1,p.y],[p.x-1,p.y],[p.x,p.y-1],[p.x,p.y+1]];
-	while(dirpos.length > 0){
-		let np = dirpos.splice(Math.floor(Math.random()*dirpos.length),1)[0];
-		if(np[1] >= 0 && np[0] >= 0 && np[1] < m.length && np[0] < m[0].length && m[np[1]][np[0]] == 0)
-			return np;
-	}
-	return p;
 }
 
 //populates a room with monsters
@@ -260,6 +267,7 @@ function addDoorTree(castleRooms){
 	//add root exit door
 	doors[root] = [];
 	let p = randPos(castleRooms[root]['map']);
+	castleRooms[root]['map'][p[1]][p[0]] = "D";
 	doors[root].push(new door(p[0],p[1],-1,true));
 
 	//add child doors
@@ -276,11 +284,13 @@ function addDoorTree(castleRooms){
 				let childRoomNo = children[c];
 				let m = castleRooms[childRoomNo]['map'];
 				let p = randPos(m);
+				castleRooms[childRoomNo]['map'][p[1]][p[0]] = "D";
 				doors[childRoomNo].push(new door(p[0],p[1],d))
 
 				//add parent door to child
 				let m2 = castleRooms[d]['map'];
 				let p2 = randPos(m2);
+				castleRooms[d]['map'][p2[1]][p2[0]] = "D";
 				doors[d].push(new door(p2[0],p2[1],childRoomNo))
 			}
 		}
