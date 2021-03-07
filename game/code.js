@@ -230,7 +230,12 @@ function step(){
 		bomber.x++;
 
 	//make princess follow bomber
-	if(bomber.hasPrincess){
+	if(castle['princess'] == curRoom && !bomber.hasPrincess){
+		if(touching(bomber,princess)){
+			bomber.hasPrincess = true;
+		}
+	}
+	else if(bomber.hasPrincess){
 		princess.x = oldPos[0];
 		princess.y = oldPos[1];
 	}
@@ -425,7 +430,7 @@ function renderGame(){
 		//ogres
 		ctx.drawImage(diamondIMG, bomber.anim*36,0,36,36,
 			125, 105, 45, 45);
-		ctx.fillText(bomber.money + " x Treasure Collected", 180, 130);
+		ctx.fillText(bomber.money + " x Treasure Found", 180, 130);
 
 		//ogres
 		ctx.drawImage(ogreIMG, bomber.anim*spr_size,0,spr_size,spr_size,
@@ -443,7 +448,7 @@ function renderGame(){
 			ctx.fillStyle = "#ff0000";
 			ctx.drawImage(king.img, bomber.anim*spr_size,0,spr_size,spr_size,
 				125, 305, 48, 48);
-			ctx.fillText("Black Knight Defeated!", 180, 340);
+			ctx.fillText("King Defeated!", 180, 340);
 		}
 
 		ctx.textAlign = "center";
@@ -477,13 +482,19 @@ function renderStat(){
 
 	//hearts
 	if(heartReady)
-		stx.drawImage(heartIMG, 0,0,36,36,40,100,36,36);
-	stx.fillText("x " + bomber.hp, 85,125);
+		stx.drawImage(heartIMG, 0,0,36,36,40,80,36,36);
+	stx.fillText("x " + bomber.hp, 85,105);
 
 	//diamonds
 	if(diamondReady)
-		stx.drawImage(diamondIMG, 0,0,36,36,40,170,36,36);
-	stx.fillText("x " + bomber.money, 85,195);
+		stx.drawImage(diamondIMG, 0,0,36,36,40,135,36,36);
+	stx.fillText("x " + bomber.money, 85,155);
+
+	//show characters on defeat
+	if(bomber.hasPrincess)
+		stx.drawImage(princessIMG, 0, 0, spr_size, spr_size, 40,200,36,36);
+	if(bomber.defeatKing)
+		stx.drawImage(bossKingIMG, 0, 0, spr_size, spr_size, 105,200,36,36);
 
 	//map
 	stx.fillStyle = "#000";
@@ -528,6 +539,7 @@ function newCastle(){
 	//setup castle
 	castle = genNewCastle();
 	gameMap = makeFullCastleMap(castle);
+	visitedRooms = [];
 
 	let exitDoor = null;
 	let doors = castle['layout'][castle['startRoom']]['doors'];
@@ -541,6 +553,13 @@ function newCastle(){
 	nextRoom(castle['startRoom'],[exitDoor.x,exitDoor.y]);
 
 	//add characters to their respective rooms
+	let rp = randPos(castle['layout'][castle['princess']]['map']);
+	princess.x = rp[0];
+	princess.y = rp[1];
+
+	let rp2 = randPos(castle['layout'][castle['king']]['map']);
+	king.x = rp2[0];
+	king.y = rp2[1];
 }
 
 //teleport to the next room
@@ -553,6 +572,7 @@ function nextRoom(r,pos=null){
 		visitedRooms.push(r);
 	}
 
+	//teleport player
 	if(pos == null){
 		let rp = randPos(curMap);
 		bomber.x = rp[0];
@@ -560,6 +580,12 @@ function nextRoom(r,pos=null){
 	}else{
 		bomber.x = pos[0];
 		bomber.y = pos[1];
+	}
+
+	//if princess add her
+	if(bomber.hasPrincess){
+		princess.x = bomber.x;
+		princess.y = bomber.y;
 	}
 	
 }

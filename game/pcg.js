@@ -229,7 +229,7 @@ function makeDoorTree(){
 	tree[r] = [];
 	let parList = [r];
 
-	//add to tree (no more than 2 doors per room)
+	//add to tree (no more than 2 child doors per room)
 	while(d.length > 0){
 		//pick a node without 2 children
 		let p = parList[Math.floor(Math.random()*parList.length)];
@@ -242,7 +242,7 @@ function makeDoorTree(){
 			parList.splice(parList.indexOf(p),1);
 		}
 	}
-	console.log(tree);
+	//console.log(tree);
 
 	return [r,tree];
 }
@@ -266,7 +266,7 @@ function addDoorTree(castleRooms){
 	for(let d=0;d<16;d++){
 		let children = dt[d];
 		//no children
-		if(children == 0)
+		if(children.length == 0)
 			continue;
 		//children
 		else{
