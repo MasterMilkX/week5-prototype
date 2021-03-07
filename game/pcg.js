@@ -173,8 +173,11 @@ function genNewCastle(){
 	castle['startRoom'] = root;
 
 	//add the princess's and boss's locations
-	castle['princess'] = randInd(16);
-	castle['king'] = randInd(16);
+	let princessRoom = randInd(16)
+	castle['princess'] = princessRoom;
+
+	let kingRoom = randInd(16);
+	castle['king'] = kingRoom;
 
 	return castle;
 
@@ -239,6 +242,7 @@ function makeDoorTree(){
 			parList.splice(parList.indexOf(p),1);
 		}
 	}
+	console.log(tree);
 
 	return [r,tree];
 }
