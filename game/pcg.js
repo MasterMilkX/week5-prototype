@@ -116,6 +116,17 @@ function randPos(map){
 	return [x,y];
 }
 
+//get closest open position to a point
+function nextPos(m,p){
+	let dirpos = [[p.x+1,p.y],[p.x-1,p.y],[p.x,p.y-1],[p.x,p.y+1]];
+	while(dirpos.length > 0){
+		let np = dirpos.splice(Math.floor(Math.random()*dirpos.length),1)[0];
+		if(np[1] >= 0 && np[0] >= 0 && np[1] < m.length && np[0] < m[0].length && m[np[1]][np[0]] == 0)
+			return np;
+	}
+	return p;
+}
+
 //populates a room with monsters
 function makeRoom(){
 	let room = {
@@ -213,18 +224,20 @@ function makeDoorTree(){
 	//make root
 	let r = d.splice(randInd(d.length),1);
 	tree[r] = [];
+	let parList = [r];
 
 	//add to tree (no more than 2 doors per room)
 	while(d.length > 0){
 		//pick a node without 2 children
-		let p = Object.keys(tree)[randInd(Object.keys(tree).length)];
-		while(tree[p].length == 2){
-			p = Object.keys(tree)[randInd(Object.keys(tree).length)];
-		}
-
+		let p = parList[Math.floor(Math.random()*parList.length)];
 		let n = d.splice(randInd(d.length),1)[0];
 		tree[p].push(n)
 		tree[n] = [];
+		parList.push(n);
+
+		if(tree[p].length == 2){
+			parList.splice(parList.indexOf(p),1);
+		}
 	}
 
 	return [r,tree];

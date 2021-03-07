@@ -6,7 +6,14 @@
 				background-color:#ffffff;
 				text-align: center;
 			}
-			#game{
+			canvas{
+				/* scale up pixels */
+				image-rendering: -moz-crisp-edges;
+				image-rendering: -webkit-crisp-edges;
+				image-rendering: pixelated;
+				image-rendering: crisp-edges;
+			}
+			#gameCanvas{
 				width:512px;
 				height:448px;
 				border:2px solid #000000;
@@ -14,12 +21,16 @@
 				padding-right: 0;
 				margin-left: auto;
 				margin-right: auto;
+			}
 
-				/* scale up pixels */
-				image-rendering: -moz-crisp-edges;
-				image-rendering: -webkit-crisp-edges;
-				image-rendering: pixelated;
-				image-rendering: crisp-edges;
+			#statCanvas{
+				width:180px;
+				height:448px;
+				border:2px solid #000000;
+				padding-left: 0;
+				padding-right: 0;
+				margin-left: auto;
+				margin-right: auto;
 			}
 
 
@@ -28,6 +39,8 @@
 	</head>
 	<body onload='init();'>
 		<!--<div id="debugBar"><p id="debug" style="color:white">...</p></div>-->
+		<canvas id='gameCanvas'>Update your browser noob</canvas>
+		<canvas id='statCanvas'>Update your browser noob</canvas>
 		<script src="code.js"></script>
 	</body>
 </html>
