@@ -388,6 +388,7 @@ function step(){
 			//die 
 			if(touching(ex,og)){
 				og.dead = true;
+				bomber.ogres++;
 
 				//drop loot if available
 				if(og.drop == "heart"){
@@ -869,32 +870,48 @@ function renderGame(){
 		//diamonds
 		ctx.fillStyle = "#00FCFC";
 		ctx.drawImage(diamondIMG, bomber.anim*36,0,36,36,
-			120, 105, 45, 45);
-		ctx.fillText((bomber.totalMoney+bomber.money) + " x Treasure Found", 180, 130);
+			30, 105, 45, 45);
+		ctx.fillText((bomber.totalMoney+bomber.money) + " x Treasure Found", 100, 130);
 
 		//ogres
 		ctx.fillStyle = "#017900";
 		ctx.drawImage(ogreIMG, bomber.anim*spr_size,0,spr_size,spr_size,
-			120, 165, 48, 48);
-		ctx.fillText((bomber.totalOgres+bomber.ogres) + " x Ogres defeated", 180, 200);
+			30, 165, 48, 48);
+		ctx.fillText((bomber.totalOgres+bomber.ogres) + " x Ogres defeated", 100, 200);
 		
 		//princess and king
 		ctx.fillStyle = "#D56AD4";
 		ctx.drawImage(princess.img, bomber.anim*spr_size,0,spr_size,spr_size,
-			120, 235, 48, 48);
-		ctx.fillText(bomber.totalPrincesses + " x Princesses Saved", 180, 270);
+			30, 235, 48, 48);
+		ctx.fillText(bomber.totalPrincesses + " x Princesses Saved", 100, 270);
 		
 		
 		ctx.fillStyle = "#ff0000";
 		ctx.drawImage(king.img, bomber.anim*spr_size,0,spr_size,spr_size,
-			120, 305, 48, 48);
-		ctx.fillText(bomber.totalKings + " x Kings Defeated!", 180, 340);
+			30, 305, 48, 48);
+		ctx.fillText(bomber.totalKings + " x Kings Defeated!", 100, 340);
 		
 
 		ctx.textAlign = "center";
 		ctx.fillStyle = "#F3C714";
 		ctx.font = "24px monospace";
-		ctx.fillText("Press Z to restart", canvas.width/2, 400);
+		ctx.fillText("Press Z to restart", canvas.width/2, 420);
+
+		//score
+		
+		let score = ((bomber.totalMoney+bomber.money)*10 + (bomber.totalOgres+bomber.ogres)*15 + bomber.totalPrincesses*50 + (bomber.totalKings+(bomber.defeatKing ? 1 : 0))*100);
+		ctx.fillStyle = "#fff";
+		ctx.font = "24px monospace";
+		ctx.fillText("SCORE", 420,150);
+		ctx.font = "28px monospace";
+		ctx.fillText(score, 420,180);
+
+		let highScore = (!localStorage.highScore || localStorage.highScore < score ? score : localStorage.highScore);
+		ctx.font = "24px monospace";
+		ctx.fillText("HIGH SCORE", 420,250);
+		ctx.font = "28px monospace";
+		ctx.fillText(highScore, 420,280);
+		localStorage.highScore = highScore;
 		
 	}
 	
