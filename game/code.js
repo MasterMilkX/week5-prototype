@@ -54,6 +54,21 @@ bombIMG.src = "img/bomb.png";
 var bombReady = false;
 bombIMG.onload = function(){bombReady = true;};
 
+var explosionIMG = new Image();
+explosionIMG.src = "img/explosion.png";
+var explosionReady = false;
+explosionIMG.onload = function(){explosionReady = true;};
+
+var bomb2IMG = new Image();
+bomb2IMG.src = "img/bomb2.png";
+var bomb2Ready = false;
+bomb2IMG.onload = function(){bomb2Ready = true;};
+
+var explosion2IMG = new Image();
+explosion2IMG.src = "img/explosion2.png";
+var explosion2Ready = false;
+explosion2IMG.onload = function(){explosion2Ready = true;};
+
 var doorIMG = new Image();
 doorIMG.src = 'img/portal.png';
 var doorReady = false;
@@ -84,6 +99,10 @@ var bomber = {
 	castles : 0,
 	ogres : 0,
 
+	color : 'blue',
+	placedBomb : false,
+	curBomb : null,
+
 	//animations
 	img : bomberIMG,
 	ready : bomberReady,
@@ -109,18 +128,23 @@ var princess = {
 	//animations
 	img : princessIMG,
 	ready : princessReady,
-	show : true
+	show : true,
+	dead : false
 }
 
 var king = {
 	//position
 	x : 0,
 	y : 0,
+	color : 'red',
+	hp : 2,
 
 	//animations
 	img : bossKingIMG,
 	ready : bossKingReady,
-	show : true
+	show : true,
+	placedBomb : false,
+	curBomb : null
 }
 
 //allow random item drops for ogre
@@ -140,14 +164,26 @@ function Ogre(x,y,room){
 	this.x = x;
 	this.y = y;
 	this.drop = randDrop();
+	this.dead = false;
 }
 
 //bombs placed on maps
-function Bomb(x,y){
+function Bomb(x,y,type='blue'){
 	this.x = x;
 	this.y = y;
-	this.fuse = 2;
+	this.type = type;
+	this.fuse = 3;
 }
+var bombs = [];
+
+//explosion from the bomb
+function explosion(x,y,i,type='blue'){
+	this.x = x;
+	this.y = y;
+	this.i = i;
+	this.type = type;
+}
+var explosions = [];
 
 //hearts to pickup
 function Heart(x,y,room){
@@ -227,8 +263,17 @@ function searchArr2D(arr2,e2){
 	}
 	return -1;
 }
+//check if an array is in a 2d array (boolean)
 function inArr2D(arr2,e2){
 	return searchArr2D(arr2,e2) == -1;
+}
+
+
+//get the tile from a map (if not a valid point returns -1)
+function getTile(p,m){
+	if(p[0] < 0 || p[1] < 0 || p[0] >= m[0].length || p[1] >= m.length)
+		return -1;
+	return  m[p[1]][p[0]];
 }
 
 ////////////////   KEYBOARD FUNCTIONS  //////////////////
@@ -265,6 +310,95 @@ function step(){
 	else if(keys[rightKey] && !collidable(bomber.x+1,bomber.y))
 		bomber.x++;
 
+	//make princess follow bomber
+	if(castle['princess'] == curRoom && !bomber.hasPrincess && !princess.dead){
+		if(touching(bomber,princess)){
+			bomber.hasPrincess = true;
+		}
+	}
+	else if(bomber.hasPrincess && !princess.dead){
+		princess.x = oldPos[0];
+		princess.y = oldPos[1];
+	}
+
+	//explosions + bombs
+	explosions = [];		//remove any leftover explosions
+
+	let newBombs = [];
+	for(let b=0;b<bombs.length;b++){
+		let bb = bombs[b];
+		bb.fuse--;
+			
+		//explode if at the last fuse
+		if(bb.fuse < 0){
+			if(bb.type == 'red')
+				bombExplode(bb,3);
+			else
+				bombExplode(bb,2);
+
+			//remove bomb from player
+			if(bomber.curBomb == bb){
+				bomber.curBomb = null;
+				bomber.placedBomb = false;
+			}
+			else if(king.curBomb == bb){
+				king.curBomb = null;
+				king.placedBomb = false;
+			}
+		}
+		//add to activate later
+		else{
+			newBombs.push(bb);
+		}
+	}
+	bombs = newBombs;
+
+	//take explosive bomb damage
+	let ogres = castle['layout'][curRoom]['ogres'];
+	for(let e=0;e<explosions.length;e++){
+		let ex=explosions[e];
+
+		//any bombs can hurt player
+		if(touching(ex,bomber))
+			bomber.hp--;
+
+		//any bombs can reset princess
+		if(princess.show && touching(ex,princess)){
+			bomber.hasPrincess = false;
+			princess.dead = true;
+			princess.show = false;
+		}
+
+		//blue bombs hurt king
+		if(king.show && ex.type == 'blue' && touching(ex,king)){
+			king.hp--;
+			//ding dong the bitch is dead
+			if(king.hp <= 0){
+				king.show = false;
+				bomber.defeatKing = true;
+			}
+		}
+
+		//explosions kill ogres
+		for(let o=0;o<ogres.length;o++){
+			let og = ogres[o]
+			if(og.dead)
+				continue;
+
+			//die 
+			if(touching(ex,og)){
+				og.dead = true;
+
+				//drop loot if available
+				if(og.drop == "heart"){
+					castle['layout'][curRoom]['hearts'].push(new Heart(og.x,og.y,curRoom));
+				}else if(og.drop == "diamond"){
+					castle['layout'][curRoom]['treasure'].push(new Diamond(og.x,og.y,curRoom));
+				}
+			}
+		}
+	}
+
 	//collect treasure
 	let treasure  = castle['layout'][curRoom]['treasure'];
 	for(let t=0;t<treasure.length;t++){
@@ -275,21 +409,22 @@ function step(){
 		}
 	}
 
-	//make princess follow bomber
-	if(castle['princess'] == curRoom && !bomber.hasPrincess){
-		if(touching(bomber,princess)){
-			bomber.hasPrincess = true;
+	//collect hearts
+	let hearts  = castle['layout'][curRoom]['hearts'];
+	for(let h=0;h<hearts.length;h++){
+		let heart = hearts[h];
+		if(touching(bomber, heart)){
+			bomber.hp++;
+			castle['layout'][curRoom]['hearts'].splice(t,1);
 		}
-	}
-	else if(bomber.hasPrincess){
-		princess.x = oldPos[0];
-		princess.y = oldPos[1];
 	}
 	
 	//make ogres in the room walk around and damage player
-	let ogres = castle['layout'][curRoom]['ogres'];
+	ogres = castle['layout'][curRoom]['ogres'];
 	for(let o=0;o<ogres.length;o++){
 		let ogre = ogres[o];
+		if(ogre.dead)
+			continue;
 		let r = Math.random();
 
 		if(r < 0.6){
@@ -298,23 +433,33 @@ function step(){
 			ogre.y = np[1];
 		}
 		
+		//take damage for touching bomber
 		if(touching(bomber,ogre)){
 			bomber.hp--;
+		}
+
+		//ogres reset princess
+		if(touching(princess,ogre)){
+			bomber.hasPrincess = false;
 		}
 	}
 
 	//king damage player and place bombs
-	if(castle['king'] == curRoom && !bomber.defeatKing){
+	if(castle['king'] == curRoom && !bomber.defeatKing && king.show){
+
+		//place bomb randomly
+		let r = Math.random();
+		if(r < 0.2 && !king.placedBomb){
+			let kb = new Bomb(king.x,king.y,'red');
+			bombs.push(kb);
+			king.curBomb = kb;
+			king.placedBomb = true;
+		}
 		
 		let np = drunkardsWalk(king,curMap);
 		king.x = np[0];
 		king.y = np[1];
 
-		//place bomb randomly
-		let r = Math.random();
-		if(r < 0.33){
-			//place red bomb
-		}
 		
 		if(touching(bomber,king)){
 			bomber.hp--;
@@ -344,7 +489,7 @@ function drunkardsWalk(p,m){
 	let validDir = [[p.x,p.y]];
 	for(let d=0;d<dirs.length;d++){
 		let pos = dirs[d];
-		if(pos[0] > -1 && pos[0] < 10 && pos[1] > -1 && pos[1] < 8 && m[pos[1]][pos[0]] != 1){
+		if(getTile(pos,m) == 0){
 			validDir.push(pos);
 		}
 	}
@@ -352,6 +497,65 @@ function drunkardsWalk(p,m){
 	return validDir[Math.floor(Math.random()*validDir.length)];
 }
 
+//if a bomb is going to go off, add explosion
+function bombExplode(b,len){
+	explosions.push(new explosion(b.x,b.y,0,b.type));	//center of explosion where bomb was
+
+	let t = {'v': 1, 'h':2, 'up': 3, 'left':4, 'down':5, 'right':6};
+
+	//make points in all directions
+	let pts = {'up':[],'down':[],'left':[],'right':[]};
+	for(let l=1;l<=len;l++){
+		pts['up'].push([b.x,b.y-l]);
+	}
+	for(let l=1;l<=len;l++){
+		pts['down'].push([b.x,b.y+l]);
+	}
+	for(let l=1;l<=len;l++){
+		pts['left'].push([b.x-l,b.y]);
+	}
+	for(let l=1;l<=len;l++){
+		pts['right'].push([b.x+l,b.y]);
+	}
+
+	//check for validity of the points and make corresponding explosions along them
+	let dirs = ['up','down','left','right'];
+	for(let d=0;d<dirs.length;d++){
+		let f = true;
+		let addE = [];
+		for(let i=len-1;i>=0;i--){
+			let p = pts[dirs[d]][i];
+			if(!inArr([-1,1],getTile(p,curMap))){
+				if(!f){		//stem point
+					addE.push(new explosion(p[0],p[1],t[(inArr(['up','down'],dirs[d]) ? 'v' : 'h')],b.type));
+				}else{		//end point
+					addE.push(new explosion(p[0],p[1],t[dirs[d]],b.type));
+					f = false;
+				}
+			}
+			//hit a wall
+			else{
+				addE = [];
+				f = true;
+			}
+		}
+		for(let a=0;a<addE.length;a++){explosions.push(addE[a]);}
+	}
+	
+
+	/*
+	//four directional explosion
+	let u1 = [b.x,b.y-1];
+	let u2 = [b.x,b.y-2];
+	let vu = {1: (getTile(u1,m) == 0 ? 1 : 0), 2: (getTile(u2,m) == 0 ? 1 : 0)};
+	if(vu[1] == 1 && vu[2] == 1){
+		e.push(new explosion(u1[0],u1[1],1));
+		e.push(new explosion(u2[0],u2[1],3));
+	}else if(vu[1] == 1){e.push(new explosion(u2[0],u2[1],3));}
+	*/
+
+
+}
 
 //////////////////  RENDER FUNCTIONS  ////////////////////
 
@@ -396,6 +600,33 @@ function checkRender(){
 		diamondIMG.onload = function(){diamondReady = true;};
 		if(diamondIMG.width !== 0){
 			diamondReady = true;
+		}
+	}
+
+	if(!bombReady){
+		bombIMG.onload = function(){bombReady = true;};
+		if(bombIMG.width !== 0){
+			bombReady = true;
+		}
+	}
+	if(!bomb2Ready){
+		bomb2IMG.onload = function(){bomb2Ready = true;};
+		if(bomb2IMG.width !== 0){
+			bomb2Ready = true;
+		}
+	}
+
+	if(!explosionReady){
+		explosionIMG.onload = function(){explosionReady = true;};
+		if(explosionIMG.width !== 0){
+			explosionReady = true;
+		}
+	}
+
+	if(!explosion2Ready){
+		explosion2IMG.onload = function(){explosion2Ready = true;};
+		if(explosion2IMG.width !== 0){
+			explosion2Ready = true;
 		}
 	}
 }
@@ -506,6 +737,8 @@ function renderGame(){
 			let ogres = castle['layout'][curRoom]['ogres'];
 			for(let o=0;o<ogres.length;o++){
 				let ogre = ogres[o];
+				if(ogre.dead)
+					continue;
 				if(ogreReady)
 					ctx.drawImage(ogreIMG, bomber.anim*spr_size,0,spr_size,spr_size,
 						(3*size)+ogre.x*size,(3*size)+ogre.y*size,size,size);
@@ -521,6 +754,31 @@ function renderGame(){
 					ctx.drawImage(diamondIMG, bomber.anim*36,0,36,36,
 						(3*size)+diamond.x*size,(3*size)+diamond.y*size,size,size);
 			}
+
+			let hearts = castle['layout'][curRoom]['hearts'];
+			for(let h=0;h<hearts.length;h++){
+				let heart = hearts[h];
+				if(heartReady)
+					ctx.drawImage(heartIMG, bomber.anim*36,0,36,36,
+						(3*size)+heart.x*size,(3*size)+heart.y*size,size,size);
+			}
+		}
+
+		//draw all bombs
+		for(let b=0;b<bombs.length;b++){
+			let bo = bombs[b]
+			let anim = (bo.fuse > 2 ? 2 : bo.fuse);
+			if(bombReady && bomb2Ready)
+				ctx.drawImage((bo.type == 'blue' ? bomb2IMG : bombIMG), (2-anim)*32,0,32,32,
+					(3*size)+bo.x*size,(3*size)+bo.y*size,size,size);
+		}
+
+		//draw all explosions
+		for(let e=0;e<explosions.length;e++){
+			let ex = explosions[e];
+			if(explosionReady && explosion2Ready)
+				ctx.drawImage((ex.type == 'blue' ? explosion2IMG : explosionIMG), ex.i*32,0,32,32,
+					(3*size)+ex.x*size,(3*size)+ex.y*size,size,size);
 		}
 		
 		ctx.restore();
@@ -599,13 +857,13 @@ function renderGame(){
 		ctx.fillStyle = "#00FCFC";
 		ctx.drawImage(diamondIMG, bomber.anim*36,0,36,36,
 			120, 105, 45, 45);
-		ctx.fillText(bomber.totalMoney + " x Treasure Found", 180, 130);
+		ctx.fillText((bomber.totalMoney+bomber.money) + " x Treasure Found", 180, 130);
 
 		//ogres
 		ctx.fillStyle = "#017900";
 		ctx.drawImage(ogreIMG, bomber.anim*spr_size,0,spr_size,spr_size,
 			120, 165, 48, 48);
-		ctx.fillText(bomber.totalOgres + " x Ogres defeated", 180, 200);
+		ctx.fillText((bomber.totalOgres+bomber.ogres) + " x Ogres defeated", 180, 200);
 		
 		//princess and king
 		ctx.fillStyle = "#D56AD4";
@@ -651,19 +909,33 @@ function renderStat(){
 
 	//hearts
 	if(heartReady)
-		stx.drawImage(heartIMG, 0,0,36,36,40,80,36,36);
-	stx.fillText("x " + bomber.hp, 85,105);
+		stx.drawImage(heartIMG, 0,0,36,36,42,60,32,32);
+	stx.fillText("x " + bomber.hp, 85,85);
 
 	//diamonds
 	if(diamondReady)
-		stx.drawImage(diamondIMG, 0,0,36,36,40,135,36,36);
-	stx.fillText("x " + bomber.money, 85,155);
+		stx.drawImage(diamondIMG, 0,0,36,36,42,105,32,32);
+	stx.fillText("x " + bomber.money, 85,125);
+
+	//ogres
+	if(ogreReady)
+		stx.drawImage(ogreIMG, 0,0,32,32,40,140,36,36);
+	stx.fillText("x " + bomber.ogres, 85,165);
+
+
 
 	//show characters on defeat
-	if(bomber.hasPrincess)
+	if(bomber.hasPrincess || princess.dead)
 		stx.drawImage(princessIMG, 0, 0, spr_size, spr_size, 40,200,36,36);
 	if(bomber.defeatKing)
 		stx.drawImage(bossKingIMG, 0, 0, spr_size, spr_size, 105,200,36,36);
+
+	if(princess.dead){
+		stx.fillStyle = "#000";
+		stx.font = "48px monospace";
+		stx.fillText("X", 45,230);
+
+	}
 
 	//map
 	stx.fillStyle = "#000";
@@ -729,6 +1001,8 @@ function newCastle(){
 	bomber.ogres = 0;
 	bomber.money = 0;
 
+	princess.dead = false;
+
 	//setup castle
 	castle = genNewCastle();
 	gameMap = makeFullCastleMap(castle);
@@ -786,6 +1060,11 @@ function nextRoom(r,pos=null){
 		princess.y = bomber.y;
 	}
 	
+	//remove all bombs
+	explosions = [];
+	bombs = [];
+	bomber.curBomb = null;
+	king.curBomb = null;
 }
 
 //finish castle level
@@ -874,6 +1153,21 @@ function main(){
 	}else{
 		canGotoNext = true;
 	}
+
+	//place a new bomb if allowed
+	if(keys[b_key] && !bomber.placedBomb){
+		let b = new Bomb(bomber.x,bomber.y,'blue');
+		bomber.curBomb = b;
+		bombs.push(b);
+		bomber.placedBomb = true;
+	}
+
+	//show the king is possible
+	if(castle['king'] != curRoom && king.show)
+		king.show = false;
+	else if(castle['king'] == curRoom && !bomber.defeatKing && !king.show)
+		king.show = true;
+
 
 	//game over
 	if(bomber.hp == 0){

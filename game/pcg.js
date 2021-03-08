@@ -142,6 +142,7 @@ function makeRoom(){
 		'mapIndex' : 0,
 		'ogres' : [],
 		'treasure' : [],
+		'hearts' : [],
 		'doors' : []
 	}
 
