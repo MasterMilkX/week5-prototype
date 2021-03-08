@@ -363,14 +363,14 @@ function step(){
 			bomber.hp--;
 
 		//any bombs can reset princess
-		if(princess.show && touching(ex,princess)){
+		if(princess.show && (bomber.hasPrincess || castle['princess'] == curRoom)&& touching(ex,princess)){
 			bomber.hasPrincess = false;
 			princess.dead = true;
 			princess.show = false;
 		}
 
 		//blue bombs hurt king
-		if(king.show && ex.type == 'blue' && touching(ex,king)){
+		if(king.show && ex.type == 'blue' && !bomber.defeatKing && castle['king'] == curRoom && touching(ex,king) ){
 			king.hp--;
 			//ding dong the bitch is dead
 			if(king.hp <= 0){
@@ -415,7 +415,7 @@ function step(){
 		let heart = hearts[h];
 		if(touching(bomber, heart)){
 			bomber.hp++;
-			castle['layout'][curRoom]['hearts'].splice(t,1);
+			castle['layout'][curRoom]['hearts'].splice(h,1);
 		}
 	}
 	
@@ -441,6 +441,8 @@ function step(){
 		//ogres reset princess
 		if(touching(princess,ogre)){
 			bomber.hasPrincess = false;
+			princess.dead = true;
+			princess.show = false;
 		}
 	}
 
@@ -717,8 +719,11 @@ function renderGame(){
 		
 		/*   add draw functions here  */
 		//draw tiles from tileset
-		drawCastle();
-		drawDoors();
+		if(castleSet){
+			drawCastle();
+			drawDoors();
+		}
+		
 
 		//draw characters
 		if(bomber.ready)
@@ -790,7 +795,7 @@ function renderGame(){
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		
 		//background
-		ctx.fillStyle = "#232323";
+		ctx.fillStyle = "#454545";
 		ctx.fillRect(0,0,canvas.width, canvas.height);
 
 		//title
@@ -815,11 +820,19 @@ function renderGame(){
 		ctx.fillText(bomber.ogres + " x Ogres defeated", 180, 200);
 		
 		//princess and king
-		if(bomber.hasPrincess){
+		if(bomber.hasPrincess || princess.dead){
 			ctx.fillStyle = "#D56AD4";
-			ctx.drawImage(princess.img, bomber.anim*spr_size,0,spr_size,spr_size,
+			ctx.drawImage(princess.img, (princess.dead ? 0 : bomber.anim*spr_size),0,spr_size,spr_size,
 				120, 235, 48, 48);
-			ctx.fillText("Princess Saved!", 180, 270);
+			if(!princess.dead)
+				ctx.fillText("Princess Saved!", 180, 270);
+			else{
+				ctx.fillStyle = "#000";
+				ctx.font = "52px monospace";
+				ctx.fillText("X", 130,280);
+				ctx.font = "18px monospace";
+				ctx.fillText("Princess Died!", 180, 270);
+			}
 		}
 		if(bomber.defeatKing){
 			ctx.fillStyle = "#ff0000";
@@ -1001,7 +1014,11 @@ function newCastle(){
 	bomber.ogres = 0;
 	bomber.money = 0;
 
+	//revive characters
 	princess.dead = false;
+	princess.show = true;
+	king.dead = false;
+	king.show = true;
 
 	//setup castle
 	castle = genNewCastle();
