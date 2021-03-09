@@ -24,7 +24,7 @@ var tilesReady = false;
 tiles.onload = function(){
 	tilesReady = true;
 };
-var tpr = 2; //tiles per row
+var tpr = 3; //tiles per row
 
 
 //characters
@@ -89,6 +89,11 @@ var heartIMG = new Image();
 heartIMG.src = "img/heart.png";
 var heartReady = false;
 heartIMG.onload = function(){heartReady = true;};
+
+var acidIMG = new Image();
+acidIMG.src = "img/acid.png";
+var acidReady = false;
+acidIMG.onload = function(){acidReady = true;};
 
 
 /////  AI AND PLAYER  //////
@@ -207,11 +212,19 @@ function Heart(x,y,room){
 	this.room = room;
 }
 
+//treasure to collect
 function Diamond(x,y,room){
 	this.x = x;
 	this.y = y;
 	this.room = room;
 }
+
+function Acid(x,y,room){
+	this.x = x;
+	this.y = y;
+	this.room = room;
+}
+var acids = [];
 
 ///// CAMERA AND MAP  //////
 /*
@@ -440,6 +453,16 @@ function step(){
 				}
 			}
 		}
+
+		//destroy acid 
+		let ac2 = []
+		for(let a=0;a<acids.length;a++){
+			let acid = acids[a];
+			if(!(acid.room == curRoom && touching(ex,acid))){
+				ac2.push(acid);
+			}
+		}
+		acids = ac2;
 	}
 
 	//collect treasure
@@ -480,6 +503,12 @@ function step(){
 			princess.dead = true;
 			princess.show = false;
 		}
+
+		//drop acid (tabs lol)
+		let r = Math.random();
+		if(r < 0.12){
+			acids.push(new Acid(ogre.x, ogre.y, curRoom));
+		}
 	}
 
 	//king damage player and place bombs
@@ -497,6 +526,23 @@ function step(){
 		
 		if(touching(bomber,king)){
 			bomber.hp--;
+		}
+	}
+
+	//bomber and princess take damage from acid
+	for(let a=0;a<acids.length;a++){
+		let acid = acids[a];
+		if(acid.room == curRoom){
+			if(touching(bomber,acid)){
+				bomber.hp--;
+				acids.splice(a,1);
+			}
+			if((bomber.hasPrincess) && !princess.dead && princess.show && touching(princess,acid)){
+				bomber.hasPrincess = false;
+				princess.dead = true;
+				princess.show = false;
+				acids.splice(a,1);
+			}
 		}
 	}
 
@@ -675,6 +721,13 @@ function checkRender(){
 			dragonReady = true;
 		}
 	}
+
+	if(!acidReady){
+		acidIMG.onload = function(){acidReady = true;};
+		if(acidIMG.width !== 0){
+			acidReady = true;
+		}
+	}
 }
 
 //calculate the camera offset to show the map
@@ -780,11 +833,18 @@ function renderGame(){
 		
 
 		//draw characters
+		for(let a=0;a<acids.length;a++){
+			if(acids[a].room == curRoom){
+				ctx.drawImage(acidIMG, 0,0,spr_size,spr_size,
+					(3*size)+acids[a].x*size,(3*size)+acids[a].y*size,size,size)
+			}
+			
+		}
 
 
 		//dragon
 		if(dragon.room == curRoom && dragon.show && dragonReady){
-			ctx.drawImage(dragonIMG,0,0,50,50,dragon.x,dragon.y,64,64);
+			ctx.drawImage(dragonIMG,50*(bomber.anim),0,50,50,dragon.x,dragon.y,64,64);
 		}
 
 		//bomber
@@ -1130,6 +1190,7 @@ function newCastle(){
 	king.y = rp2[1];
 
 	//add dragon to the empty room
+	dragon.room = -1;
 	for(let r=0;r<16;r++){
 		if(castle['layout'][r]['mapIndex'] == 0){		//blank room
 			dragon.show = true;
@@ -1138,6 +1199,7 @@ function newCastle(){
 		}
 	}
 
+	acids = [];
 
 
 	castleSet = true;
@@ -1199,6 +1261,7 @@ function resetGame(){
 	bomber.totalPrincesses = 0;
 
 	bomber.hp = 3;
+	castles = 0;
 
 	newCastle();
 }
