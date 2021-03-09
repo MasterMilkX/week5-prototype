@@ -150,9 +150,9 @@ var king = {
 //allow random item drops for ogre
 function randDrop(){
 	let r = Math.random();
-	if(r < 0.5){
+	if(r < 0.6){
 		return "";
-	}else if(r < 0.9){
+	}else if(r < 0.95){
 		return "diamond";
 	}else{
 		return "heart";
@@ -321,6 +321,26 @@ function step(){
 		princess.y = oldPos[1];
 	}
 
+	//king move
+	if(castle['king'] == curRoom && !bomber.defeatKing && king.show){
+		let np = drunkardsWalk(king,curMap);
+		king.x = np[0];
+		king.y = np[1];
+	}
+
+	//ogres move
+	let ogres = castle['layout'][curRoom]['ogres'];
+	for(let o=0;o<ogres.length;o++){
+		let ogre = ogres[o];
+		let r = Math.random();
+
+		if(r < 0.6){
+			let np = drunkardsWalk(ogre,curMap);
+			ogre.x = np[0];
+			ogre.y = np[1];
+		}
+	}
+
 	//explosions + bombs
 	explosions = [];		//remove any leftover explosions
 
@@ -354,7 +374,7 @@ function step(){
 	bombs = newBombs;
 
 	//take explosive bomb damage
-	let ogres = castle['layout'][curRoom]['ogres'];
+	ogres = castle['layout'][curRoom]['ogres'];
 	for(let e=0;e<explosions.length;e++){
 		let ex=explosions[e];
 
@@ -426,14 +446,7 @@ function step(){
 		let ogre = ogres[o];
 		if(ogre.dead)
 			continue;
-		let r = Math.random();
 
-		if(r < 0.6){
-			let np = drunkardsWalk(ogre,curMap);
-			ogre.x = np[0];
-			ogre.y = np[1];
-		}
-		
 		//take damage for touching bomber
 		if(touching(bomber,ogre)){
 			bomber.hp--;
@@ -444,6 +457,10 @@ function step(){
 			bomber.hasPrincess = false;
 			princess.dead = true;
 			princess.show = false;
+		}
+
+		for(let e=0;e<explosions.length;e++){
+
 		}
 	}
 
@@ -458,10 +475,6 @@ function step(){
 			king.curBomb = kb;
 			king.placedBomb = true;
 		}
-		
-		let np = drunkardsWalk(king,curMap);
-		king.x = np[0];
-		king.y = np[1];
 
 		
 		if(touching(bomber,king)){
