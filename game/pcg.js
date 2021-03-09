@@ -300,5 +300,10 @@ function addDoorTree(castleRooms){
 	return [root,doors];
 }
 
+//adds bricks to the map
+function addBricks(m){
+	let b = Math.floor(Math.random()*12);
 
+	
+}
 

@@ -363,7 +363,7 @@ function step(){
 			bomber.hp--;
 
 		//any bombs can reset princess
-		if(princess.show && (bomber.hasPrincess || castle['princess'] == curRoom)&& touching(ex,princess)){
+		if(princess.show && (bomber.hasPrincess || castle['princess'] == curRoom) && touching(ex,princess)){
 			bomber.hasPrincess = false;
 			princess.dead = true;
 			princess.show = false;
@@ -440,7 +440,7 @@ function step(){
 		}
 
 		//ogres reset princess
-		if(touching(princess,ogre)){
+		if(princess.show && (castle['princess'] == curRoom || bomber.hasPrincess) && touching(princess,ogre)){
 			bomber.hasPrincess = false;
 			princess.dead = true;
 			princess.show = false;
@@ -1109,6 +1109,9 @@ function finishCastle(){
 	bomber.totalPrincesses += (bomber.hasPrincess ? 1 : 0);
 	bomber.totalOgres += bomber.ogres;
 	bomber.totalMoney += bomber.money;
+
+	if(bomber.hasPrincess)
+		bomber.hp+=1;
 
 }
 
