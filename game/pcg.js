@@ -304,6 +304,6 @@ function addDoorTree(castleRooms){
 function addBricks(m){
 	let b = Math.floor(Math.random()*12);
 
-	
+
 }
 

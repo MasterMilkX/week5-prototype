@@ -48,6 +48,11 @@ bossKingIMG.src = "img/evil_king.png";
 var bossKingReady = false;
 bossKingIMG.onload = function(){bossKingReady = true;};
 
+var dragonIMG = new Image();
+dragonIMG.src = "img/dragon.png";
+var dragonReady = false;
+dragonIMG.onload = function(){dragonReady = true;};
+
 //items
 var bombIMG = new Image();
 bombIMG.src = "img/bomb.png";
@@ -145,6 +150,16 @@ var king = {
 	show : true,
 	placedBomb : false,
 	curBomb : null
+}
+
+var dragon = {
+	x : 224,
+	y : 200,
+
+	img : dragonIMG,
+	ready : dragonReady,
+	room : -1,
+	show : false
 }
 
 //allow random item drops for ogre
@@ -328,6 +343,13 @@ function step(){
 		king.y = np[1];
 	}
 
+	//sacrifice princess
+	if(dragon.room == curRoom && bomber.hasPrincess && dragon.show && !princess.dead){
+		if(inArr([4,5],princess.x) && inArr([3,4],princess.y)){
+			sacrifice();
+		}
+	}
+
 	//ogres move
 	let ogres = castle['layout'][curRoom]['ogres'];
 	for(let o=0;o<ogres.length;o++){
@@ -458,10 +480,6 @@ function step(){
 			princess.dead = true;
 			princess.show = false;
 		}
-
-		for(let e=0;e<explosions.length;e++){
-
-		}
 	}
 
 	//king damage player and place bombs
@@ -558,19 +576,24 @@ function bombExplode(b,len){
 		for(let a=0;a<addE.length;a++){explosions.push(addE[a]);}
 	}
 	
+}
 
-	/*
-	//four directional explosion
-	let u1 = [b.x,b.y-1];
-	let u2 = [b.x,b.y-2];
-	let vu = {1: (getTile(u1,m) == 0 ? 1 : 0), 2: (getTile(u2,m) == 0 ? 1 : 0)};
-	if(vu[1] == 1 && vu[2] == 1){
-		e.push(new explosion(u1[0],u1[1],1));
-		e.push(new explosion(u2[0],u2[1],3));
-	}else if(vu[1] == 1){e.push(new explosion(u2[0],u2[1],3));}
-	*/
+//sacrifice the princess to the dragon
+function sacrifice(){
+	dragon.show = false;
+	bomber.hasPrincess = false;
+	princess.dead = true;
+	princess.show = false;
 
-
+	//drop random loot
+	for(let l=0;l<4;l++){
+		let r = (Math.random() < 0.33 ? "heart" : "diamond");
+		if(r == "heart"){
+			castle['layout'][curRoom]['hearts'].push(new Heart(4+Math.floor(l/2),3+(l%2),curRoom));
+		}else if(r == "diamond"){
+			castle['layout'][curRoom]['treasure'].push(new Diamond(4+Math.floor(l/2),3+(l%2),curRoom));
+		}
+	}
 }
 
 //////////////////  RENDER FUNCTIONS  ////////////////////
@@ -643,6 +666,13 @@ function checkRender(){
 		explosion2IMG.onload = function(){explosion2Ready = true;};
 		if(explosion2IMG.width !== 0){
 			explosion2Ready = true;
+		}
+	}
+
+	if(!dragonReady){
+		dragonIMG.onload = function(){dragonReady = true;};
+		if(dragonIMG.width !== 0){
+			dragonReady = true;
 		}
 	}
 }
@@ -739,19 +769,40 @@ function renderGame(){
 		}
 		
 
+		//draw instructions
+		if(dragon.room == curRoom && dragon.show){
+			ctx.textAlign = "center";
+			ctx.fillStyle = "#004AC4";
+			ctx.font = "18px monospace";
+			ctx.fillText("Give me the princess...",250, 130);
+			ctx.fillText("and I shall reward you", 250, 145)
+		}
+		
+
 		//draw characters
+
+
+		//dragon
+		if(dragon.room == curRoom && dragon.show && dragonReady){
+			ctx.drawImage(dragonIMG,0,0,50,50,dragon.x,dragon.y,64,64);
+		}
+
+		//bomber
 		if(bomber.ready)
 			ctx.drawImage(bomber.img, bomber.anim*spr_size,0,spr_size,spr_size,
 				(3*size)+bomber.x*size,(3*size)+bomber.y*size,size,size);
 
+		//princess
 		if((bomber.hasPrincess || castle['princess'] == curRoom) && princess.ready && princess.show)
 			ctx.drawImage(princess.img, ((bomber.anim+1)%2)*spr_size,0,spr_size,spr_size,
 				(3*size)+princess.x*size,(3*size)+princess.y*size,size,size);
 
+		//king
 		if(castle['king'] == curRoom && bossKingReady && king.show)
 			ctx.drawImage(king.img, bomber.anim*spr_size,0,spr_size,spr_size,
 				(3*size)+king.x*size,(3*size)+king.y*size,size,size);
 
+		//ogre
 		if(castleSet){
 			let ogres = castle['layout'][curRoom]['ogres'];
 			for(let o=0;o<ogres.length;o++){
@@ -1078,6 +1129,17 @@ function newCastle(){
 	king.x = rp2[0];
 	king.y = rp2[1];
 
+	//add dragon to the empty room
+	for(let r=0;r<16;r++){
+		if(castle['layout'][r]['mapIndex'] == 0){		//blank room
+			dragon.show = true;
+			dragon.room = r;
+			break;
+		}
+	}
+
+
+
 	castleSet = true;
 }
 
@@ -1112,6 +1174,8 @@ function nextRoom(r,pos=null){
 	bombs = [];
 	bomber.curBomb = null;
 	king.curBomb = null;
+	bomber.placedBomb = false;
+	king.placedBomb = false;
 }
 
 //finish castle level
