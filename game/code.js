@@ -96,6 +96,11 @@ var acidReady = false;
 acidIMG.onload = function(){acidReady = true;};
 
 
+/////  SOUND EFFECT  //////
+var collectSound = new Audio('sound/collectSound.wav');
+
+var explosionSound = new Audio('sound/explosionSound.wav');
+
 /////  AI AND PLAYER  //////
 
 var bomber = {
@@ -240,7 +245,7 @@ let camOffY = 0;
 var castle = {}			//4x4 array of different room types labeled by number with key character locations
 var gameMap = []		//full tiled map
 var visitedRooms = []	//list of rooms the player has visited already (to show on the map)
-var curRoom = [];		//current room map layout 
+var curRoom = [];		//current room map layout
 var curMap = [];		//map of current room
 var castleSet = false;	//if castle setup yet
 
@@ -309,7 +314,7 @@ function getTile(p,m){
 
 // key events
 var keyTick = 0;
-var kt = null; 
+var kt = null;
 
 function anyKey(){
 	return anyMoveKey() || anyActionKey();
@@ -383,7 +388,7 @@ function step(){
 	for(let b=0;b<bombs.length;b++){
 		let bb = bombs[b];
 		bb.fuse--;
-			
+
 		//explode if at the last fuse
 		if(bb.fuse < 0){
 			if(bb.type == 'red')
@@ -440,7 +445,7 @@ function step(){
 			if(og.dead)
 				continue;
 
-			//die 
+			//die
 			if(touching(ex,og)){
 				og.dead = true;
 				bomber.ogres++;
@@ -454,7 +459,7 @@ function step(){
 			}
 		}
 
-		//destroy acid 
+		//destroy acid
 		let ac2 = []
 		for(let a=0;a<acids.length;a++){
 			let acid = acids[a];
@@ -471,6 +476,7 @@ function step(){
 		let diamond = treasure[t];
 		if(touching(bomber, diamond)){
 			bomber.money++;
+			collectSound.play();
 			castle['layout'][curRoom]['treasure'].splice(t,1);
 		}
 	}
@@ -480,11 +486,13 @@ function step(){
 	for(let h=0;h<hearts.length;h++){
 		let heart = hearts[h];
 		if(touching(bomber, heart)){
+			collectSound.play();
 			bomber.hp++;
 			castle['layout'][curRoom]['hearts'].splice(h,1);
+			collectSound.play();
 		}
 	}
-	
+
 	//make ogres in the room walk around and damage player
 	ogres = castle['layout'][curRoom]['ogres'];
 	for(let o=0;o<ogres.length;o++){
@@ -523,7 +531,7 @@ function step(){
 			king.placedBomb = true;
 		}
 
-		
+
 		if(touching(bomber,king)){
 			bomber.hp--;
 		}
@@ -581,6 +589,8 @@ function drunkardsWalk(p,m){
 function bombExplode(b,len){
 	explosions.push(new explosion(b.x,b.y,0,b.type));	//center of explosion where bomb was
 
+	explosionSound.play();
+	
 	let t = {'v': 1, 'h':2, 'up': 3, 'left':4, 'down':5, 'right':6};
 
 	//make points in all directions
@@ -621,7 +631,6 @@ function bombExplode(b,len){
 		}
 		for(let a=0;a<addE.length;a++){explosions.push(addE[a]);}
 	}
-	
 }
 
 //sacrifice the princess to the dragon
@@ -770,19 +779,19 @@ function drawCastle(){
 			if(y < 0 || y >= gameMap.length || x < 0 || x >= gameMap[0].length){
 				ctx.fillStyle = "#000";
 				ctx.fillRect(mx*size,my*size,size,size);
-			}	
+			}
 			else{
 				//otherwise draw the tile
 				let t = gameMap[y][x];
 				t = (typeof(t) == 'string' ? 0 : t);
 
-				ctx.drawImage(tiles, 
-					spr_size * Math.floor(t % tpr), spr_size * Math.floor(t / tpr), 
-					spr_size, spr_size, 
-					(mx * size), (my * size), 
+				ctx.drawImage(tiles,
+					spr_size * Math.floor(t % tpr), spr_size * Math.floor(t / tpr),
+					spr_size, spr_size,
+					(mx * size), (my * size),
 					size, size);
 			}
-			
+
 			mx++;
 		}
 		my++;
@@ -798,7 +807,7 @@ function drawDoors(){
 		let door = cr[d];
 		ctx.drawImage(doorIMG, spr_size*portalAnim,(door.isExit ? 1 : 0)*spr_size,spr_size,spr_size,
 			(3*size)+door.x*size,(3*size)+door.y*size,size,size);
-	}	
+	}
 }
 
 //draw images onto the canvas
@@ -809,18 +818,18 @@ function renderGame(){
 		ctx.save();
 		//ctx.translate(-camera.x, -camera.y);		//camera
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		
+
 		//background
 		ctx.fillStyle = "#dedede";
 		ctx.fillRect(0,0,canvas.width, canvas.height);
-		
+
 		/*   add draw functions here  */
 		//draw tiles from tileset
 		if(castleSet){
 			drawCastle();
 			drawDoors();
 		}
-		
+
 
 		//draw instructions
 		if(dragon.room == curRoom && dragon.show){
@@ -830,7 +839,7 @@ function renderGame(){
 			ctx.fillText("Give me the princess...",250, 130);
 			ctx.fillText("and I shall reward you", 250, 145)
 		}
-		
+
 
 		//draw characters
 		for(let a=0;a<acids.length;a++){
@@ -838,7 +847,7 @@ function renderGame(){
 				ctx.drawImage(acidIMG, 0,0,spr_size,spr_size,
 					(3*size)+acids[a].x*size,(3*size)+acids[a].y*size,size,size)
 			}
-			
+
 		}
 
 
@@ -910,7 +919,7 @@ function renderGame(){
 				ctx.drawImage((ex.type == 'blue' ? explosion2IMG : explosionIMG), ex.i*32,0,32,32,
 					(3*size)+ex.x*size,(3*size)+ex.y*size,size,size);
 		}
-		
+
 		ctx.restore();
 	}
 	//finish castle screen
@@ -918,7 +927,7 @@ function renderGame(){
 		ctx.save();
 		//ctx.translate(-camera.x, -camera.y);		//camera
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		
+
 		//background
 		ctx.fillStyle = "#454545";
 		ctx.fillRect(0,0,canvas.width, canvas.height);
@@ -943,7 +952,7 @@ function renderGame(){
 		ctx.drawImage(ogreIMG, bomber.anim*spr_size,0,spr_size,spr_size,
 			120, 165, 48, 48);
 		ctx.fillText(bomber.ogres + " x Ogres defeated", 180, 200);
-		
+
 		//princess and king
 		if(bomber.hasPrincess || princess.dead){
 			ctx.fillStyle = "#D56AD4";
@@ -970,13 +979,13 @@ function renderGame(){
 		ctx.fillStyle = "#F3C714";
 		ctx.font = "24px monospace";
 		ctx.fillText("Press Z to go to the next castle", canvas.width/2, 400);
-		
+
 	}
 	else if(gamemode == "game_over"){
 		ctx.save();
 		//ctx.translate(-camera.x, -camera.y);		//camera
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		
+
 		//background
 		ctx.fillStyle = "#232323";
 		ctx.fillRect(0,0,canvas.width, canvas.height);
@@ -1002,19 +1011,19 @@ function renderGame(){
 		ctx.drawImage(ogreIMG, bomber.anim*spr_size,0,spr_size,spr_size,
 			30, 165, 48, 48);
 		ctx.fillText((bomber.totalOgres+bomber.ogres) + " x Ogres defeated", 100, 200);
-		
+
 		//princess and king
 		ctx.fillStyle = "#D56AD4";
 		ctx.drawImage(princess.img, bomber.anim*spr_size,0,spr_size,spr_size,
 			30, 235, 48, 48);
 		ctx.fillText(bomber.totalPrincesses + " x Princesses Saved", 100, 270);
-		
-		
+
+
 		ctx.fillStyle = "#ff0000";
 		ctx.drawImage(king.img, bomber.anim*spr_size,0,spr_size,spr_size,
 			30, 305, 48, 48);
 		ctx.fillText(bomber.totalKings + " x Kings Defeated!", 100, 340);
-		
+
 
 		ctx.textAlign = "center";
 		ctx.fillStyle = "#F3C714";
@@ -1022,7 +1031,7 @@ function renderGame(){
 		ctx.fillText("Press Z to restart", canvas.width/2, 420);
 
 		//score
-		
+
 		let score = ((bomber.totalMoney+bomber.money)*10 + (bomber.totalOgres+bomber.ogres)*15 + bomber.totalPrincesses*50 + (bomber.totalKings+(bomber.defeatKing ? 1 : 0))*100);
 		ctx.fillStyle = "#fff";
 		ctx.font = "24px monospace";
@@ -1036,16 +1045,16 @@ function renderGame(){
 		ctx.font = "28px monospace";
 		ctx.fillText(highScore, 420,280);
 		localStorage.highScore = highScore;
-		
+
 	}
-	
+
 }
 
 
 function renderStat(){
 	stx.save();
 	stx.clearRect(0, 0, statCanvas.width, statCanvas.height);
-	
+
 	//background
 	stx.fillStyle = "#898989";
 	stx.fillRect(0,0,statCanvas.width, statCanvas.height);
@@ -1230,7 +1239,7 @@ function nextRoom(r,pos=null){
 		princess.x = bomber.x;
 		princess.y = bomber.y;
 	}
-	
+
 	//remove all bombs
 	explosions = [];
 	bombs = [];
@@ -1317,7 +1326,7 @@ function main(){
 							}
 						}
 					}
-					
+
 				}
 			}
 		}else if(gamemode == "clear_screen" && canGotoNext){
