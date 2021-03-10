@@ -98,8 +98,13 @@ acidIMG.onload = function(){acidReady = true;};
 
 /////  SOUND EFFECT  //////
 var collectSound = new Audio('sound/collectSound.wav');
+collectSound.volume = 0.5;
 
 var explosionSound = new Audio('sound/explosionSound.wav');
+explosionSound.volume = 0.5;
+
+var screamSound = new Audio('sound/screaming-goat.mp3');
+screamSound.volume = 0.3;
 
 /////  AI AND PLAYER  //////
 
@@ -426,6 +431,7 @@ function step(){
 		if(princess.show && (bomber.hasPrincess || castle['princess'] == curRoom) && touching(ex,princess)){
 			bomber.hasPrincess = false;
 			princess.dead = true;
+			screamSound.play();
 			princess.show = false;
 		}
 
@@ -509,6 +515,7 @@ function step(){
 		if(princess.show && (castle['princess'] == curRoom || bomber.hasPrincess) && touching(princess,ogre)){
 			bomber.hasPrincess = false;
 			princess.dead = true;
+			screamSound.play();
 			princess.show = false;
 		}
 
@@ -548,6 +555,7 @@ function step(){
 			if((bomber.hasPrincess) && !princess.dead && princess.show && touching(princess,acid)){
 				bomber.hasPrincess = false;
 				princess.dead = true;
+				screamSound.play();
 				princess.show = false;
 				acids.splice(a,1);
 			}
@@ -639,6 +647,7 @@ function sacrifice(){
 	bomber.hasPrincess = false;
 	princess.dead = true;
 	princess.show = false;
+	screamSound.play();
 
 	//drop random loot
 	for(let l=0;l<4;l++){
